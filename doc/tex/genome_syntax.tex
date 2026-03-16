@@ -1,0 +1,966 @@
+% ============================================================
+%  Genomic Syntactic Analysis
+%  A Formal Grammar Approach to Genome Structure
+% ============================================================
+\documentclass[12pt, a4paper, oneside]{book}
+
+% ── Encoding & Fonts ────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+% \usepackage{microtype}  % disabled: requires scalable fonts
+\emergencystretch=3em   % allow extra stretch to eliminate overfull hboxes
+
+% ── Mathematics ─────────────────────────────────────────────
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+
+% ── Layout ──────────────────────────────────────────────────
+\usepackage[
+  a4paper,
+  top=30mm, bottom=30mm,
+  left=35mm, right=25mm,
+  headheight=15pt
+]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Headers & Footers ───────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\slshape\leftmark}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Colors ──────────────────────────────────────────────────
+\usepackage[dvipsnames, table]{xcolor}
+\definecolor{c1}{HTML}{0ea5e9}   % sky blue  – level accent
+\definecolor{c2}{HTML}{7c3aed}   % violet
+\definecolor{c3}{HTML}{10b981}   % emerald
+\definecolor{c4}{HTML}{f59e0b}   % amber
+\definecolor{c5}{HTML}{ef4444}   % red
+\definecolor{c6}{HTML}{ec4899}   % pink
+\definecolor{bgdark}{HTML}{0f172a}
+\definecolor{bggray}{HTML}{f8fafc}
+\definecolor{rulegray}{HTML}{e2e8f0}
+\definecolor{ntcolor}{HTML}{10b981}
+\definecolor{tcolor}{HTML}{f59e0b}
+\definecolor{commentcolor}{HTML}{94a3b8}
+
+% ── Graphics & TikZ ─────────────────────────────────────────
+\usepackage{tikz}
+\usetikzlibrary{
+  positioning, arrows.meta, shapes.geometric,
+  backgrounds, fit, decorations.pathreplacing,
+  calc, shadows.blur
+}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ── Tables ──────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{colortbl}
+
+% ── Code / Verbatim ─────────────────────────────────────────
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{bggray},
+  frame=single,
+  framerule=0pt,
+  rulecolor=\color{rulegray},
+  breaklines=true,
+  showstringspaces=false,
+  commentstyle=\color{commentcolor}\itshape,
+  keywordstyle=\color{c2}\bfseries,
+  stringstyle=\color{c3},
+  numbers=left,
+  numberstyle=\tiny\color{commentcolor},
+  xleftmargin=18pt,
+}
+
+% ── Boxes & Environments ────────────────────────────────────
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{skins, breakable, listings}
+
+\newtcolorbox{grammarbox}[1][]{
+  enhanced,
+  colback=bggray,
+  colframe=c2,
+  arc=4pt,
+  boxrule=0.6pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt,
+  fonttitle=\bfseries\small,
+  title={Generative Grammar Rules},
+  attach boxed title to top left={yshift=-2mm, xshift=6mm},
+  boxed title style={colback=c2, arc=3pt, boxrule=0pt},
+  #1
+}
+
+\newtcolorbox{notebox}[1][Note]{
+  enhanced,
+  colback=c1!6!white,
+  colframe=c1,
+  arc=4pt,
+  boxrule=0.5pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\small,
+  title={#1},
+  attach boxed title to top left={yshift=-2mm, xshift=6mm},
+  boxed title style={colback=c1, arc=3pt, boxrule=0pt},
+}
+
+\newtcolorbox{keybox}[1][Key Concept]{
+  enhanced,
+  colback=c3!6!white,
+  colframe=c3,
+  arc=4pt,
+  boxrule=0.5pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\small,
+  title={#1},
+  attach boxed title to top left={yshift=-2mm, xshift=6mm},
+  boxed title style={colback=c3, arc=3pt, boxrule=0pt},
+}
+
+% ── Hyperlinks (load last) ───────────────────────────────────
+\usepackage[
+  colorlinks=true,
+  linkcolor=c2,
+  urlcolor=c1,
+  citecolor=c3,
+  bookmarksnumbered=true,
+  pdfusetitle
+]{hyperref}
+\usepackage{cleveref}
+
+% ── Theorem Environments ────────────────────────────────────
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{example}{Example}[chapter]
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[chapter]
+
+% ── Custom Commands ─────────────────────────────────────────
+\newcommand{\NT}[1]{\textcolor{ntcolor}{\texttt{#1}}}   % Non-terminal
+\newcommand{\T}[1]{\textcolor{tcolor}{\texttt{#1}}}     % Terminal
+\newcommand{\derives}{\;\longrightarrow\;}
+\newcommand{\gor}{\;\mid\;}                              % grammar OR
+\newcommand{\bp}{\,\text{bp}}
+\newcommand{\kbp}{\,\text{kbp}}
+\newcommand{\Mbp}{\,\text{Mbp}}
+\newcommand{\Gbp}{\,\text{Gbp}}
+
+% ── Document Metadata ───────────────────────────────────────
+\title{Genomic Syntactic Analysis:\\
+       A Formal Grammar Approach to\\
+       Genome Structure and Variation}
+\author{Wanhong\\[4pt]
+        \small Serendipitech Inc.}
+\date{\today}
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+% ── TITLE PAGE ──────────────────────────────────────────────
+\begin{titlepage}
+\pagecolor{bgdark}
+\color{white}
+
+\begin{tikzpicture}[remember picture, overlay]
+  % Background decorative arcs
+  \draw[c2!40, line width=0.4pt, opacity=0.5]
+    (current page.center) ++(-6,4) arc(120:420:8cm);
+  \draw[c1!40, line width=0.3pt, opacity=0.4]
+    (current page.center) ++(5,-3) arc(0:270:11cm);
+  % DNA helix hint (stylized dots)
+  \foreach \y in {0,0.5,...,10}{
+    \pgfmathsetmacro{\xA}{0.5*cos(\y*60)}
+    \pgfmathsetmacro{\xB}{-0.5*cos(\y*60)}
+    \fill[c3!60, opacity=0.35]
+      ([xshift=\xA cm, yshift=\y cm-1cm] current page.south west)
+      ++( 2.2,0) circle (1.5pt);
+    \fill[c4!60, opacity=0.35]
+      ([xshift=\xB cm, yshift=\y cm-1cm] current page.south west)
+      ++( 2.2,0) circle (1.5pt);
+  }
+\end{tikzpicture}
+
+\vspace*{3cm}
+
+\begin{center}
+
+{\fontsize{9}{11}\selectfont\ttfamily\color{c1}\MakeUppercase{%
+  Research Monograph \quad|\quad Computational Genomics Series}}
+
+\vspace{0.8cm}
+\rule{\textwidth}{0.5pt}
+\vspace{0.6cm}
+
+{\fontsize{32}{38}\selectfont\bfseries
+Genomic Syntactic Analysis}
+
+\vspace{0.4cm}
+
+{\fontsize{16}{20}\selectfont\color{c1}
+A Formal Grammar Approach to\\[4pt]
+Genome Structure and Variation}
+
+\vspace{0.6cm}
+\rule{\textwidth}{0.5pt}
+\vspace{1.5cm}
+
+{\large Wanhong}\\[6pt]
+{\normalsize\color{gray} Serendipitech Inc.}
+
+\vfill
+
+% Volume badge
+\begin{tikzpicture}
+  \node[
+    draw=c2, rounded corners=4pt,
+    inner sep=10pt,
+    fill=c2!15,
+    text=white
+  ]{
+    \ttfamily\small
+    Vol.\,I \quad|\quad Foundations
+  };
+\end{tikzpicture}
+
+\vspace{1cm}
+{\small\color{gray}\today}
+
+\end{center}
+\end{titlepage}
+
+% Restore normal page color
+\pagecolor{white}\color{black}
+
+% ── FRONT MATTER ────────────────────────────────────────────
+\frontmatter
+\tableofcontents
+
+% ── Preface ─────────────────────────────────────────────────
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+
+This monograph develops an interdisciplinary framework that imports concepts from
+formal language theory and syntactic analysis into computational genomics.
+The central thesis is that the genome is not merely a list of independent
+molecular markers, but a structured object governed by hierarchical rules
+analogous to the grammars of natural languages.
+
+The intended audience is researchers trained in engineering, mathematics,
+or computer science who wish to engage rigorously with genomic data.
+Biological background is introduced from first principles wherever possible,
+and each concept is grounded in formal notation familiar to the engineering
+community.
+
+\bigskip
+\noindent
+\textit{Chapter~1} establishes the physical and informational structure of
+the genome, deriving a hierarchy from the primitive unit (the nucleotide
+base) up to the full genome, expressed as a context-free generative grammar.
+
+\vfill
+\begin{flushright}
+\textit{Wanhong}\\
+Tokyo, \today
+\end{flushright}
+
+% ── MAIN MATTER ─────────────────────────────────────────────
+\mainmatter
+
+% ============================================================
+\chapter{Genome Structure: A Hierarchical Grammar}
+\label{chap:structure}
+% ============================================================
+
+\begin{notebox}[Chapter Overview]
+This chapter introduces the physical architecture of the genome from the
+bottom up.  We treat each structural level as a production rule in a
+generative grammar, culminating in a six-level hierarchy that maps
+naturally onto the formal language hierarchy of Chomsky.
+\end{notebox}
+
+\bigskip
+
+% ────────────────────────────────────────────────────────────
+\section{The Genome as a Formal Language}
+\label{sec:genome-as-language}
+% ────────────────────────────────────────────────────────────
+
+A genome is the complete set of hereditary instructions of an organism,
+encoded as a linear sequence over a four-letter alphabet
+$\Sigma = \{A,\, T,\, G,\, C\}$.
+From an engineering perspective this is a \emph{quaternary string} of length
+approximately $3 \times 10^9$ characters in the case of \textit{Homo sapiens}.
+
+\begin{definition}[Genome Alphabet]
+Let $\Sigma = \{A, T, G, C\}$ be the terminal alphabet, where each symbol
+represents one of the four nucleotide bases:
+\begin{align*}
+  A &\;=\; \text{Adenine},   &
+  T &\;=\; \text{Thymine},   \\
+  G &\;=\; \text{Guanine},   &
+  C &\;=\; \text{Cytosine.}
+\end{align*}
+\end{definition}
+
+Unlike a flat string, however, the genome possesses rich hierarchical
+structure.  Bases group into codons, codons into exons, exons combine with
+regulatory elements to form genes, genes are organised along chromosomes,
+and chromosomes together constitute the genome.  This hierarchy is
+reminiscent of the phrase-structure hierarchy in natural language,
+and motivates a \emph{generative grammar} description.
+
+% ────────────────────────────────────────────────────────────
+\section{The Generative Grammar of Genomic Structure}
+\label{sec:grammar}
+% ────────────────────────────────────────────────────────────
+
+We adopt the notation of context-free grammars (CFGs).
+A production rule is written $\NT{A} \derives \alpha$, where
+\NT{A} is a non-terminal (structural category) and $\alpha$ is a string
+of non-terminals and/or terminals.  The operator ``$\gor$'' separates
+alternatives; ``${}^+$'' means one or more occurrences; ``${}^*$''
+means zero or more.
+
+\begin{grammarbox}
+\small
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}p{0.55\linewidth}@{\hspace{0.3em}}p{0.4\linewidth}@{}}
+$\NT{Genome} \derives \NT{Chromosome}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{all chromosomes together}} \
+$\NT{Chromosome} \derives \NT{Chromatid} \mathbin{{-}{-}} \NT{Chromatid}$ & \textcolor{commentcolor}{\scriptsize\textit{sister chromatid pair}} \
+$\NT{Chromatid} \derives \NT{Locus}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{ordered sequence of loci}} \
+$\NT{Locus} \derives \NT{Gene} \gor \NT{NonCoding}$ & \textcolor{commentcolor}{\scriptsize\textit{coding or non-coding region}} \
+$\NT{NonCoding} \derives \NT{Base}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{non-coding DNA sequence}} \
+\multicolumn{2}{@{}l}{\textbf{\scriptsize —— Core Gene Structure ——}} \
+$\NT{Gene} \derives \NT{RegulatoryRegion};\NT{CodingRegion}$ & \textcolor{commentcolor}{\scriptsize\textit{regulatory $+$ coding}} \
+$\NT{RegulatoryRegion} \derives \NT{Promoter};\NT{Enhancer}^{}$ & \textcolor{commentcolor}{\scriptsize\textit{promoter $+$ zero or more enhancers}} \
+$\NT{Promoter} \derives \NT{CoreElement};\NT{TFBS}^{}$ & \textcolor{commentcolor}{\scriptsize\textit{core promoter $+$ proximal TF sites}} \
+$\NT{CoreElement} \derives \T{T}\T{A}\T{T}\T{A}\T{A}\T{A} \gor \T{C}\T{A}\T{A}\T{T}$ & \textcolor{commentcolor}{\scriptsize\textit{TATA-box or CAAT-box}} \
+$\NT{Enhancer} \derives \NT{TFBS}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{cluster of TF binding sites}} \
+$\NT{TFBS} \derives \NT{Base};\NT{Base};\NT{Base};\NT{Base};\NT{Base};\NT{Base}$ & \textcolor{commentcolor}{\scriptsize\textit{minimal 6bp motif}} \
+$\NT{CodingRegion} \derives \NT{Exon};(\NT{Intron};\NT{Exon})^{*}$ & \textcolor{commentcolor}{\scriptsize\textit{alternating exons and introns}} \
+$\NT{Exon} \derives \NT{Codon}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{sequence of codons}} \
+$\NT{Intron} \derives \NT{Base}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{non-coding intronic sequence}} \
+$\NT{Codon} \derives \NT{Base};\NT{Base};\NT{Base}$ & \textcolor{commentcolor}{\scriptsize\textit{triplet of bases}} \
+$\NT{Base} \derives \T{A} \gor \T{T} \gor \T{G} \gor \T{C}$ & \textcolor{commentcolor}{\scriptsize\textit{terminal symbols}} \
+\end{tabular}
+\smallskip\
+\noindent
+{\small\color{ntcolor}\textbf{Non-terminals}} are structural categories; {\small\color{tcolor}\textbf{Terminals}} $\T{A}, \T{T}, \T{G}, \T{C}$ are the irreducible atoms.
+\end{grammarbox}
+
+\begin{grammarbox}
+\small
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}p{0.55\linewidth}@{\hspace{0.3em}}p{0.4\linewidth}@{}}
+\multicolumn{2}{@{}l}{\textbf{\scriptsize —— Cell Cycle ——}} \
+$\NT{CellCycle} \derives \NT{G1};\NT{S};\NT{G2};\NT{M}$ & \textcolor{commentcolor}{\scriptsize\textit{cell division cycle}} \
+$\NT{G1} \derives \NT{G1Genes};\NT{Growth}$ & \textcolor{commentcolor}{\scriptsize\textit{cell growth phase}} \
+$\NT{S} \derives \NT{ReplicationGenes};\NT{HistoneGenes}$ & \textcolor{commentcolor}{\scriptsize\textit{DNA synthesis phase}} \
+$\NT{G2} \derives \NT{PreparationGenes}$ & \textcolor{commentcolor}{\scriptsize\textit{preparation for mitosis}} \
+$\NT{M} \derives \NT{Division}$ & \textcolor{commentcolor}{\scriptsize\textit{mitosis phase}} \
+\multicolumn{2}{@{}l}{\textbf{\scriptsize —— Phase-Specific Genes ——}} \
+$\NT{G1Genes} \derives \NT{Gene}^{}$ & \textcolor{commentcolor}{\scriptsize\textit{genes active in G1}} \
+$\NT{ReplicationGenes} \derives \NT{Gene}^{}$ & \textcolor{commentcolor}{\scriptsize\textit{DNA polymerase, etc.}} \
+$\NT{HistoneGenes} \derives \NT{Gene}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{histone proteins}} \
+$\NT{PreparationGenes} \derives \NT{Gene}^{*}$ & \textcolor{commentcolor}{\scriptsize\textit{tubulin, cyclins}} \
+$\NT{Growth} \derives \epsilon$ & \textcolor{commentcolor}{\scriptsize\textit{cell growth process}} \
+$\NT{Division} \derives \epsilon$ & \textcolor{commentcolor}{\scriptsize\textit{cell division process}} \
+\end{tabular}
+\smallskip\
+\noindent
+{\small\color{ntcolor}\textbf{Non-terminals}} are structural categories; {\small\color{tcolor}\textbf{Terminals}} $\T{A}, \T{T}, \T{G}, \T{C}$ are the irreducible atoms.
+\end{grammarbox}
+
+\begin{grammarbox}
+\small
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}p{0.55\linewidth}@{\hspace{0.3em}}p{0.4\linewidth}@{}}
+\multicolumn{2}{@{}l}{\textbf{\scriptsize —— Chromatin States ——}} \
+$\NT{Locus} \derives \NT{Open} \gor \NT{Closed}$ & \textcolor{commentcolor}{\scriptsize\textit{chromatin accessibility}} \
+$\NT{Open} \derives \NT{ActiveGene} \gor \NT{PoisedGene}$ & \textcolor{commentcolor}{\scriptsize\textit{euchromatin}} \
+$\NT{Closed} \derives \NT{SilencedGene} \gor \NT{Repetitive}$ & \textcolor{commentcolor}{\scriptsize\textit{heterochromatin}} \
+$\NT{ActiveGene} \derives \NT{Gene}$ & \textcolor{commentcolor}{\scriptsize\textit{actively transcribed}} \
+$\NT{PoisedGene} \derives \NT{Gene}$ & \textcolor{commentcolor}{\scriptsize\textit{ready for activation}} \
+$\NT{SilencedGene} \derives \NT{Gene}$ & \textcolor{commentcolor}{\scriptsize\textit{permanently repressed}} \
+$\NT{Repetitive} \derives \NT{Base}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{repetitive DNA}} \
+\multicolumn{2}{@{}l}{\textbf{\scriptsize —— RNA Processing ——}} \
+$\NT{PrimaryTranscript} \derives \NT{Gene}$ & \textcolor{commentcolor}{\scriptsize\textit{initial transcript}} \
+$\NT{MatureRNA} \derives \NT{Cap};\NT{Exon}^{+};\NT{Tail}$ & \textcolor{commentcolor}{\scriptsize\textit{processed mRNA}} \
+$\NT{Cap} \derives \epsilon$ & \textcolor{commentcolor}{\scriptsize\textit{5' cap}} \
+$\NT{Tail} \derives \T{A}\T{A}\T{A}\T{A}\T{A}\T{A}\T{A}\T{A}\T{A}\T{A}$ & \textcolor{commentcolor}{\scriptsize\textit{poly-A tail (simplified)}} \
+\multicolumn{2}{@{}l}{\textbf{\scriptsize —— Protein ——}} \
+$\NT{Protein} \derives \NT{AminoChain}$ & \textcolor{commentcolor}{\scriptsize\textit{functional protein}} \
+$\NT{AminoChain} \derives \NT{Amino}^{+}$ & \textcolor{commentcolor}{\scriptsize\textit{polypeptide chain}} \
+$\NT{Amino} \derives \NT{CodonToAmino}$ & \textcolor{commentcolor}{\scriptsize\textit{amino acid}} \
+$\NT{CodonToAmino} \derives \T{Met} \gor \T{Phe} \gor \T{Leu} \gor \T{Ser} \gor \T{Pro} \gor \T{Arg}$ & \textcolor{commentcolor}{\scriptsize\textit{simplified mapping}} \
+$\T{Met} \derives \epsilon$ \quad $\T{Phe} \derives \epsilon$ \quad $\T{Leu} \derives \epsilon$ & \textcolor{commentcolor}{\scriptsize\textit{amino acid symbols}} \
+$\T{Ser} \derives \epsilon$ \quad $\T{Pro} \derives \epsilon$ \quad $\T{Arg} \derives \epsilon$ & \textcolor{commentcolor}{\scriptsize\textit{amino acid symbols}} \
+\end{tabular}
+\smallskip\
+\noindent
+{\small\color{ntcolor}\textbf{Non-terminals}} are structural categories; {\small\color{tcolor}\textbf{Terminals}} are $\T{A}, \T{T}, \T{G}, \T{C}$ and amino acid symbols. $\epsilon$ = empty production.
+\end{grammarbox}
+
+\begin{remark}
+This grammar is deliberately simplified.  In reality, the production rules
+for \NT{RegulatoryRegion} are context-sensitive (the same enhancer can
+activate different genes depending on three-dimensional chromatin folding),
+motivating extensions beyond pure CFGs in later chapters.
+\end{remark}
+
+% ────────────────────────────────────────────────────────────
+\section{Level-by-Level Description of the Hierarchy}
+\label{sec:levels}
+% ────────────────────────────────────────────────────────────
+
+The following subsections describe each level of the grammar,
+progressing from the primitive terminal symbol upward to the genome.
+
+% ────────────────────────────────────────────
+\subsection{Level 1 — Nucleotide Base (Terminal Symbol)}
+\label{subsec:base}
+% ────────────────────────────────────────────
+
+\begin{definition}[Nucleotide Base]
+A \emph{nucleotide base} is one of the four organic molecules
+$\{A, T, G, C\}$ that serve as the terminal symbols of the genomic alphabet.
+Each base is separated from its neighbour by approximately $0.34\,\text{nm}$
+along the DNA double helix.
+\end{definition}
+
+Bases pair according to \textbf{Watson--Crick complementarity}:
+\begin{equation}
+  A \;\Longleftrightarrow\; T \quad (\text{2 hydrogen bonds}),
+  \qquad
+  G \;\Longleftrightarrow\; C \quad (\text{3 hydrogen bonds}).
+\end{equation}
+
+This complementarity defines the double-stranded structure of DNA and is
+fundamental to replication fidelity.  The two strands are antiparallel:
+
+\begin{center}
+\ttfamily\small
+\begin{tabular}{ccccccccc}
+5$'$ & A & T & G & C & G & A & T & \ldots \\
+     & | & | & | & | & | & | & | & \\
+3$'$ & T & A & C & G & C & T & A & \ldots
+\end{tabular}
+\end{center}
+
+\begin{notebox}[Engineering Analogy]
+Think of the base alphabet $\Sigma$ as the bit-set of a quaternary
+information system.  Each base carries $\log_2 4 = 2\,\text{bits}$
+of information.  The entire human haploid genome encodes approximately
+$2 \times 3 \times 10^9 = 6 \times 10^9\,\text{bits} \approx 750\,\text{MB}$.
+\end{notebox}
+
+% ────────────────────────────────────────────
+\subsection{Level 2 — Codon}
+\label{subsec:codon}
+% ────────────────────────────────────────────
+
+\begin{definition}[Codon]
+A \emph{codon} is a contiguous triplet of bases $b_1 b_2 b_3 \in \Sigma^3$.
+It constitutes the minimal unit that specifies an amino acid or a
+translational control signal.
+\end{definition}
+
+The codon space has cardinality $|\Sigma|^3 = 4^3 = 64$, yet only 20 amino
+acids are encoded, together with one start codon (\texttt{ATG}) and three
+stop codons (\texttt{TAA}, \texttt{TAG}, \texttt{TGA}).
+The resulting many-to-one mapping is called the \emph{degeneracy} of the
+genetic code:
+
+\begin{equation}
+  f : \Sigma^3 \longrightarrow \mathcal{A} \cup \{\text{start}, \text{stop}\},
+  \quad |\mathcal{A}| = 20,
+  \quad |{\Sigma^3}| = 64.
+\end{equation}
+
+\begin{keybox}[Engineering Analogy]
+A codon is a 3-character opcode in a fixed-width instruction set.
+The genetic code $f$ is the \emph{decode table} of this instruction set
+architecture (ISA), mapping each 6-bit opcode to one of 21 operations
+(20 amino acids + stop).
+\end{keybox}
+
+% ────────────────────────────────────────────
+\subsection{Level 3 — Exon and Intron}
+\label{subsec:exon-intron}
+% ────────────────────────────────────────────
+
+A gene's coding region is not a contiguous sequence of codons.
+It is interrupted by non-coding segments:
+
+\begin{definition}[Exon]
+An \emph{exon} is a sequence of codons that is retained in the mature
+messenger RNA (mRNA) after post-transcriptional processing.
+Exons directly encode the amino acid sequence of a protein.
+\end{definition}
+
+\begin{definition}[Intron]
+An \emph{intron} is an intervening sequence that is transcribed into
+the precursor mRNA (pre-mRNA) but subsequently excised by the
+\emph{spliceosome} machinery, leaving no trace in the mature mRNA.
+\end{definition}
+
+The linear structure of a pre-mRNA transcript is:
+\begin{equation}
+  5'\;\underbrace{E_1}_{\text{exon}}\;
+     \underbrace{I_1}_{\text{intron}}\;
+     \underbrace{E_2}_{\text{exon}}\;
+     \underbrace{I_2}_{\text{intron}}\;
+     \underbrace{E_3}_{\text{exon}}\;\ldots\;3'
+\end{equation}
+
+After splicing:
+\begin{equation}
+  \text{mature mRNA} = 5'\;E_1\;E_2\;E_3\;\ldots\;3'
+\end{equation}
+
+\begin{notebox}[Quantitative note]
+In humans, introns account for approximately 90\% of the total length
+of a typical gene, while exons are comparatively short.
+Protein-coding exons together cover only $\approx 1.5\%$ of the entire genome.
+\end{notebox}
+
+\textbf{Alternative splicing.}
+The spliceosome can join different subsets of exons, producing multiple
+distinct mRNA isoforms from a single gene locus.  This is a form of
+\emph{ambiguous parsing}: the same pre-mRNA sequence admits multiple
+parse trees under different splicing grammars, each yielding a distinct
+protein product.  This phenomenon will be revisited in Chapter~4.
+
+% ────────────────────────────────────────────
+\subsection{Level 4 — Gene}
+\label{subsec:gene}
+% ────────────────────────────────────────────
+
+\begin{definition}[Gene]
+A \emph{gene} is a functional unit of hereditary information consisting
+of a \emph{regulatory region} and a \emph{coding region}, together
+occupying a contiguous locus on a chromosome.
+\end{definition}
+
+The internal organisation of a canonical protein-coding gene is:
+
+\begin{center}
+\begin{tikzpicture}[
+  x=1.0cm, y=0.7cm,
+  every node/.style={font=\small},
+  lbl/.style={font=\footnotesize\ttfamily, above=2pt}
+]
+  % Backbone
+  \draw[thick, ->, >=Stealth] (-0.3,0) -- (11.8,0) node[right]{$3'$};
+  \node at (-0.5,0) {$5'$};
+
+  % Enhancer
+  \fill[c6!25] (0.2,-0.25) rectangle (1.6,0.25);
+  \draw[c6,  thick] (0.2,-0.25) rectangle (1.6,0.25);
+  \node[lbl, c6] at (0.9,0.25) {Enhancer};
+
+  % Promoter
+  \fill[c4!25] (1.8,-0.25) rectangle (3.2,0.25);
+  \draw[c4,  thick] (1.8,-0.25) rectangle (3.2,0.25);
+  \node[lbl, c4] at (2.5,0.25) {Promoter};
+
+  % TSS marker
+  \draw[c4, dashed] (3.2,0.5) -- (3.2,-0.5);
+  \node[font=\tiny, c4, below=2pt] at (3.2,-0.25) {TSS};
+
+  % Exon 1
+  \fill[c3!25] (3.4,-0.25) rectangle (4.6,0.25);
+  \draw[c3, thick] (3.4,-0.25) rectangle (4.6,0.25);
+  \node[lbl, c3] at (4.0,0.25) {Exon 1};
+
+  % Intron 1
+  \fill[gray!10] (4.6,-0.25) rectangle (6.2,0.25);
+  \draw[gray,  thick] (4.6,-0.25) rectangle (6.2,0.25);
+  \node[lbl, gray] at (5.4,0.25) {Intron 1};
+
+  % Exon 2
+  \fill[c3!25] (6.2,-0.25) rectangle (7.4,0.25);
+  \draw[c3, thick] (6.2,-0.25) rectangle (7.4,0.25);
+  \node[lbl, c3] at (6.8,0.25) {Exon 2};
+
+  % Intron 2
+  \fill[gray!10] (7.4,-0.25) rectangle (9.0,0.25);
+  \draw[gray,  thick] (7.4,-0.25) rectangle (9.0,0.25);
+  \node[lbl, gray] at (8.2,0.25) {Intron 2};
+
+  % Exon 3
+  \fill[c3!25] (9.0,-0.25) rectangle (10.2,0.25);
+  \draw[c3, thick] (9.0,-0.25) rectangle (10.2,0.25);
+  \node[lbl, c3] at (9.6,0.25) {Exon 3};
+
+  % Terminator
+  \fill[c5!20] (10.4,-0.25) rectangle (11.6,0.25);
+  \draw[c5, thick] (10.4,-0.25) rectangle (11.6,0.25);
+  \node[lbl, c5] at (11.0,0.25) {Terminator};
+
+  % Braces
+  \draw[decorate, decoration={brace, amplitude=5pt, mirror},
+        c4, thick] (0.2,-0.45) -- (3.2,-0.45)
+    node[midway, below=6pt, c4, font=\footnotesize]
+    {Regulatory Region};
+  \draw[decorate, decoration={brace, amplitude=5pt, mirror},
+        c3, thick] (3.4,-0.45) -- (11.6,-0.45)
+    node[midway, below=6pt, c3, font=\footnotesize]
+    {Coding Region};
+
+\end{tikzpicture}
+\end{center}
+
+\bigskip
+
+\begin{definition}[Promoter]
+A \emph{promoter} is a regulatory DNA sequence located immediately upstream
+of a gene's transcription start site (TSS).  It is the binding platform for
+RNA Polymerase~II and associated general transcription factors, and is
+\emph{required} for any transcription to occur.  In the grammar,
+$\NT{Promoter} \derives \NT{CoreElement}\;\NT{TFBS}^{*}$, where
+\NT{CoreElement} typically contains the \textbf{TATA box} (consensus
+\texttt{TATAAA}, $\approx$30\,bp upstream of TSS) and/or Initiator element.
+\end{definition}
+
+\begin{definition}[Enhancer]
+An \emph{enhancer} is a \emph{cis}-regulatory DNA element that amplifies
+transcription from a target promoter by 10- to 1000-fold.
+Unlike promoters, enhancers can be located \emph{anywhere} relative to their
+target gene: upstream, downstream, or within an intron, at distances up to
+$10^6$\,bp away, acting through DNA looping.  In the grammar,
+$\NT{Enhancer} \derives \NT{TFBS}^{+}$: an enhancer is defined by a cluster
+of transcription factor binding sites that act cooperatively.
+\end{definition}
+
+\begin{definition}[Transcription Factor Binding Site (TFBS) and Core Element]
+A \emph{transcription factor binding site} (\NT{TFBS}) is a short DNA
+sequence motif (typically 6--20\,bp) recognised and bound by a specific
+transcription factor (TF) protein.  $\NT{TFBS} \derives \NT{Base}^{+}$.
+A \emph{core element} (\NT{CoreElement}) is the minimal promoter-specific
+sequence required for RNA Pol~II positioning, such as the TATA box or
+CpG island; formally $\NT{CoreElement} \derives \NT{Base}^{+}$.
+\end{definition}
+
+\begin{definition}[Allele]
+An \emph{allele} is one of two or more alternative versions of a gene
+(or more generally, a genomic locus), differing in their nucleotide
+sequence.  In a diploid organism, each locus is represented by two
+alleles, one inherited from each parent.
+\end{definition}
+
+\begin{notebox}[Quantitative note]
+The human genome contains approximately $20{,}000$ protein-coding genes,
+which together span only $\approx 1.5\%$ of the 3.2\,Gbp genome.
+The remaining $98.5\%$ consists of introns, regulatory elements,
+transposable elements, pseudogenes, and sequences of unknown function.
+\end{notebox}
+
+% ────────────────────────────────────────────
+\subsection{Level 5 — Chromosome}
+\label{subsec:chromosome}
+% ────────────────────────────────────────────
+
+\begin{definition}[Chromosome]
+A \emph{chromosome} is a single, continuous DNA molecule complexed with
+histone proteins to form \emph{chromatin}.  During cell division it is
+further condensed into a compact, rod-shaped structure visible by light
+microscopy.
+\end{definition}
+
+The physical compaction hierarchy is:
+
+\begin{equation}
+  \text{DNA double helix}
+  \;\xrightarrow{\;\text{wrap}\;}\;
+  \text{nucleosome}
+  \;\xrightarrow{\;\text{fold}\;}\;
+  \text{chromatin fibre}
+  \;\xrightarrow{\;\text{scaffold}\;}\;
+  \text{chromosome}
+\end{equation}
+
+This $\sim\!10{,}000\times$ linear compaction allows $\approx 2\,\text{m}$
+of total DNA to fit within a nucleus of diameter $\approx 6\,\mu\text{m}$.
+
+\textbf{Human karyotype.}
+Humans possess 46 chromosomes arranged in 23 pairs: 22 pairs of
+\emph{autosomes} (Chr1--Chr22, largest to smallest) plus one pair of
+\emph{sex chromosomes} (XX in females, XY in males).
+
+\begin{center}
+\begin{tikzpicture}[x=0.55cm, y=0.5cm]
+  \foreach \i in {1,...,22}{
+    \pgfmathsetmacro{\h}{3.5 - 0.12*\i}
+    \pgfmathtruncatemacro{\x}{(\i-1)}
+    \fill[c5!60, rounded corners=2pt]
+      (\x, 0) rectangle (\x+0.35, \h);
+    \fill[c5!40, rounded corners=2pt]
+      (\x+0.4, 0) rectangle (\x+0.75, \h*0.97);
+    \node[font=\tiny, rotate=90] at (\x+0.37, -0.35) {\i};
+  }
+  % Sex chromosomes
+  \fill[c2!60, rounded corners=2pt] (22.2, 0) rectangle (22.55, 3.0);
+  \fill[c2!40, rounded corners=2pt] (22.6, 0) rectangle (22.95, 3.0);
+  \node[font=\tiny] at (22.57, -0.35) {XX};
+  \fill[c1!60, rounded corners=2pt] (23.3, 0) rectangle (23.65, 3.0);
+  \fill[c1!30, rounded corners=2pt] (23.7, 0) rectangle (24.05, 1.2);
+  \node[font=\tiny] at (23.67, -0.35) {XY};
+  \node[font=\scriptsize, gray] at (12, -0.9) {Chromosome pairs 1--22 (autosomes) + sex chromosomes};
+\end{tikzpicture}
+\end{center}
+
+\begin{definition}[Locus (plural: Loci)]
+A \emph{locus} is a fixed, named position on a chromosome where a
+particular gene or other genomic feature resides.
+Loci are specified by chromosome number, arm (p = short, q = long),
+and band coordinates, e.g.\ \texttt{17q21.31}.
+\end{definition}
+
+% ────────────────────────────────────────────
+\subsection{Level 6 — Genome}
+\label{subsec:genome}
+% ────────────────────────────────────────────
+
+\begin{definition}[Genome]
+The \emph{genome} of an organism is the complete set of its genetic
+information, comprising all chromosomes.  For diploid species the genome
+contains two copies of each autosome plus two sex chromosomes.
+The \emph{haploid} genome refers to a single copy of each chromosome.
+\end{definition}
+
+\begin{table}[h]
+\centering
+\caption{Quantitative summary of the human genome.}
+\label{tab:genome-stats}
+\begin{tabularx}{\textwidth}{lXr}
+\toprule
+\textbf{Feature} & \textbf{Description} & \textbf{Value} \\
+\midrule
+Haploid size         & Total base pairs (haploid set)       & $3.2\,\Gbp$ \\
+Diploid size         & Both homologous sets                 & $6.4\,\Gbp$ \\
+Chromosomes          & Pairs in somatic cells               & 23 pairs (46) \\
+Protein-coding genes & Distinct gene loci                   & $\approx 20{,}000$ \\
+Coding fraction      & Fraction of genome in exons          & $\approx 1.5\%$ \\
+Regulatory fraction  & Estimated functional non-coding       & $\approx 8\%$ \\
+Known SNPs           & Common single-nucleotide variants    & $\approx 10^7$ \\
+Information content  & At 2 bits/base (haploid)             & $\approx 750\,\text{MB}$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ────────────────────────────────────────────────────────────
+\section{The Full Hierarchy Diagram}
+\label{sec:hierarchy-diagram}
+% ────────────────────────────────────────────────────────────
+
+Figure~\ref{fig:hierarchy} synthesises the six levels into a single
+parse-tree style diagram.  Each node is annotated with its grammar category,
+physical scale, and engineering analogue.
+
+\begin{figure}[p]
+\centering
+\begin{tikzpicture}[
+  x=1cm, y=1cm,
+  node distance=0pt,
+  level/.style={
+    draw, rounded corners=5pt,
+    minimum width=13cm, text width=12cm, minimum height=1.5cm,
+    inner sep=10pt, align=left,
+    font=\small
+  },
+  lnum/.style={
+    font=\footnotesize\bfseries\ttfamily,
+    text=white, fill=#1,
+    minimum width=1.2cm, minimum height=1.5cm,
+    inner sep=4pt, align=center
+  },
+  arr/.style={->, >=Stealth, thick, #1},
+  alabel/.style={font=\footnotesize\itshape, fill=white, inner sep=2pt}
+]
+
+% ── Level 1: Base ──────────────────────────────────────────
+\node[level, fill=c1!10, draw=c1]
+  (L1) at (0.6, 0)
+  {\textbf{\textcolor{c1}{Base}} \enspace
+   $\NT{Base} \derives \T{A} \gor \T{T} \gor \T{G} \gor \T{C}$
+   \hspace{1em} \textcolor{gray}{\footnotesize 0.34\,nm / base}\\[3pt]
+   \textit{Terminal symbol.  4-ary digit.
+   Watson--Crick pairing: A$=$T (2H), G$\equiv$C (3H).}};
+\node[lnum=c1] at (-6.0, 0) {L1};
+
+% ── Level 2: Codon ─────────────────────────────────────────
+\node[level, fill=c2!8, draw=c2]
+  (L2) at (0.6,-2.6)
+  {\textbf{\textcolor{c2}{Codon}} \enspace
+   $\NT{Codon} \derives \NT{Base}\;\NT{Base}\;\NT{Base}$
+   \hspace{1em} \textcolor{gray}{\footnotesize 3\,bp}\\[3pt]
+   \textit{64 possible codons $\to$ 20 amino acids + start/stop.
+   Analogous to a fixed-width ISA opcode.}};
+\node[lnum=c2] at (-6.0,-2.6) {L2};
+
+% ── Level 3: Exon/Intron ────────────────────────────────────
+\node[level, fill=c3!8, draw=c3]
+  (L3) at (0.6,-5.2)
+  {\textbf{\textcolor{c3}{Exon / Intron}} \enspace
+   $\NT{Exon}\!\derives\!\NT{Codon}^{+};\;
+    \NT{CodingRegion}\!\derives\!\NT{Exon}(\NT{Intron}\;\NT{Exon})^{*}$
+   \hspace{0.5em}\textcolor{gray}{\footnotesize 100\,bp--100\,kbp}\\[3pt]
+   \textit{Exon: retained in mature mRNA (meaningful words).
+   Intron: excised by spliceosome (compiler-discarded comments).}};
+\node[lnum=c3] at (-6.0,-5.2) {L3};
+
+% ── Level 4: Gene ──────────────────────────────────────────
+\node[level, fill=c4!8, draw=c4]
+  (L4) at (0.6,-7.8)
+  {\textbf{\textcolor{c4}{Gene}} \enspace
+   $\NT{Gene} \derives \NT{RegulatoryRegion}\;\NT{CodingRegion}$
+   \hspace{1em} \textcolor{gray}{\footnotesize 1\,kbp--2\,Mbp}\\[3pt]
+   \textit{Functional unit encoding one protein (or RNA).
+   $\approx$20\,000 in humans; only 1.5\% of genome.
+   Regulatory region expands to: $\NT{Promoter}\;\NT{Enhancer}^*$.}};
+\node[lnum=c4] at (-6.0,-7.8) {L4};
+
+% ── Level 5: Chromosome ────────────────────────────────────
+\node[level, fill=c5!8, draw=c5]
+  (L5) at (0.6,-10.4)
+  {\textbf{\textcolor{c5}{Chromosome}} \enspace
+   $\NT{Chromosome} \derives \NT{Chromatid}\mathbin{{-}{-}}\NT{Chromatid}$;\enspace
+   $\NT{Chromatid} \derives \NT{Locus}^{+}$
+   \hspace{1em}\textcolor{gray}{\footnotesize 50--250\,Mbp}\\[3pt]
+   \textit{Continuous DNA + histone scaffold.
+   Humans: 46 chromosomes (23 pairs).
+   Analogous to a source-code module or file.}};
+\node[lnum=c5] at (-6.0,-10.4) {L5};
+
+% ── Level 6: Genome ────────────────────────────────────────
+\node[level, fill=c6!8, draw=c6]
+  (L6) at (0.6,-13.0)
+  {\textbf{\textcolor{c6}{Genome}} \enspace
+   $\NT{Genome} \derives \NT{Chromosome}^{+}$
+   \hspace{1em} \textcolor{gray}{\footnotesize $\approx$3.2\,Gbp (haploid)}\\[3pt]
+   \textit{Complete hereditary information of the organism.
+   $\approx$750\,MB at 2\,bits/base.
+   Analogous to the full codebase / operating system.}};
+\node[lnum=c6] at (-6.0,-13.0) {L6};
+
+% ── Arrows ─────────────────────────────────────────────────
+\draw[arr=c2]  (L1.south) -- node[alabel]{$\times 3$} (L2.north);
+\draw[arr=c3]  (L2.south) -- node[alabel]{sequences of codons} (L3.north);
+\draw[arr=c4]  (L3.south) -- node[alabel]{regulatory + coding regions} (L4.north);
+\draw[arr=c5]  (L4.south) -- node[alabel]{many genes + non-coding regions} (L5.north);
+\draw[arr=c6]  (L5.south) -- node[alabel]{23 pairs} (L6.north);
+
+\end{tikzpicture}
+\caption{Six-level generative hierarchy of genomic structure.
+  Each row corresponds to one production rule in the genome grammar
+  (\S\ref{sec:grammar}).
+  Left badges give the level number; right annotations give the physical
+  scale.  Arrows are labelled with the composition relationship.}
+\label{fig:hierarchy}
+\end{figure}
+
+% ────────────────────────────────────────────────────────────
+\section{Comparative Summary: Gene, Chromosome, Genome}
+\label{sec:comparison}
+% ────────────────────────────────────────────────────────────
+
+A common source of confusion is the distinction between the three terms
+that name the central objects of this monograph.
+Table~\ref{tab:compare} provides a side-by-side comparison.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of the three primary structural concepts.}
+\label{tab:compare}
+\renewcommand{\arraystretch}{1.4}
+{\small
+\begin{tabularx}{\textwidth}{>{\bfseries}l X X X}
+\toprule
+Concept & Definition & Scale & Engineering analogue \\
+\midrule
+\textcolor{c4}{Gene}
+  & Encodes one protein or functional RNA; includes
+    regulatory and coding sub-regions
+  & 1\,kbp--2\,Mbp; $\approx$20\,000 in humans
+  & Function / subroutine \\
+\textcolor{c5}{Chromosome}
+  & Continuous DNA + histone scaffold; carries many genes
+    and non-coding sequence
+  & 50--250\,Mbp; 46 in humans
+  & Source-code module \\
+\textcolor{c6}{Genome}
+  & Complete hereditary information; sum of all chromosomes
+  & $\approx$3.2\,Gbp haploid; $\approx$750\,MB
+  & Full codebase / OS \\
+\midrule
+\textcolor{c2}{Locus}
+  & Named position on a chromosome; addressing mechanism,
+    not an independent physical entity
+  & Precise address
+  & Memory address \\
+\textcolor{c1}{Allele}
+  & Alternative sequence at the same locus; differs between
+    individuals or homologous chromosomes
+  & Gene-sized
+  & Alternative function version \\
+\bottomrule
+\end{tabularx}
+}
+\end{table}
+
+\begin{keybox}[Critical Insight for Chapters Ahead]
+All cells of an organism contain \emph{identical} genome sequences
+(with rare exceptions).  Yet a liver cell and a neuron are functionally
+and morphologically distinct.  This difference arises entirely from
+\emph{which genes are expressed}, and at what level --- a fact controlled
+by the regulatory regions (promoters and enhancers) described in
+\S\ref{subsec:gene}.  The grammar rules governing these regulatory
+elements are the central target of genomic syntactic analysis.
+\end{keybox}
+
+% ────────────────────────────────────────────────────────────
+\section{Chapter Summary}
+\label{sec:ch1-summary}
+% ────────────────────────────────────────────────────────────
+
+This chapter established the following facts, which will be used
+throughout the remainder of the monograph:
+
+\begin{enumerate}
+  \item The genome is a quaternary string over $\Sigma = \{A,T,G,C\}$,
+        carrying $\approx 750\,\text{MB}$ of information.
+  \item Its structure is hierarchical and can be expressed as a
+        context-free generative grammar with six levels: Base $\to$
+        Codon $\to$ Exon/Intron $\to$ Gene $\to$ Chromosome $\to$ Genome.
+  \item A \emph{gene} ($\approx 20{,}000$ in humans) is a functional
+        unit comprising a regulatory region and a coding region.
+  \item A \emph{chromosome} is the physical carrier of many genes plus
+        extensive non-coding sequence.
+  \item The \emph{genome} is the union of all chromosomes and represents
+        the complete hereditary specification.
+  \item Only $\approx 1.5\%$ of the genome encodes proteins; the
+        remaining $98.5\%$ includes regulatory elements, introns,
+        repetitive sequences, and regions of currently unknown function.
+        This ``dark matter'' of the genome is where syntactic analysis
+        offers the most analytical leverage.
+\end{enumerate}
+
+\noindent
+Chapter~2 introduces the principal tool for detecting genetic variation
+--- Genome-Wide Association Studies (GWAS) --- and analyses its
+statistical foundations and limitations from the perspective of a
+researcher trained in engineering and formal methods.
+
+% ── End of Chapter 1 ────────────────────────────────────────
+\end{document}
