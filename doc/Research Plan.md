@@ -1,4 +1,8 @@
-**：对于位于非编码调控区域的VUS，能否用轻度CSG解析其结构，从而为VUS的重新分类提供证据？**
+
+
+## VUS
+
+**对于位于非编码调控区域的VUS，能否用轻度CSG解析其结构，从而为VUS的重新分类提供证据？**
 
 
 
@@ -247,3 +251,9 @@ Dataset: ClinVar gnomAD MAVE/functional assays DECIPHER GWAS / phenotype databas
 
 
 
+Today:
+
+- Design a good grammar to parse a sequence, so that it can generate a good syntax tree (We can parse).
+
+- PCFG learning? (After)
+- Show preliminary how syntax injection improve performance (utilize some dataset, to finetune?).

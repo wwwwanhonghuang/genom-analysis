@@ -344,4 +344,47 @@ for label, cod1, cod2 in [
 
 
 # =============================================================================
+# Section 13 -- Long synthetic CDS (50 / 100 / 200 codons)
+# Uses Earley parser (O(n^3)) so scale is not a problem.
+# Body codons are drawn uniformly from all 64 codons for leaf variety.
+#
+# NOTE: The right-spine tree shape is a grammar property — the CDS grammar
+# is right-recursive (ORF → BodyCodon | BodyCodon ORF), so every parse tree
+# is a right-leaning chain regardless of sequence.  The variety here is in
+# the leaf labels (codon strings and coset classes), not the tree topology.
+# =============================================================================
+import random as _random
+
+_BASES    = "ATGC"
+_ALL64    = [a + b + c for a in _BASES for b in _BASES for c in _BASES]
+_STOPS    = ["TAA", "TAG", "TGA"]
+_STARTS   = [c for c in _ALL64 if c[0] == "A"]   # all C0 (A-starting) codons
+
+def random_body(n: int, seed: int) -> str:
+    """n random body codons drawn uniformly from all 64 codons."""
+    rng = _random.Random(seed)
+    return "".join(rng.choice(_ALL64) for _ in range(n))
+
+def random_start(seed: int) -> str:
+    return _random.Random(seed).choice(_STARTS)
+
+def random_stop(seed: int) -> str:
+    return _random.Random(seed).choice(_STOPS)
+
+print()
+print("=" * 60)
+print("Section 13  Long synthetic CDS  (50 / 100 / 200 codons)")
+print("  Body codons: uniform random from all 64  (seed fixed per size)")
+print("=" * 60)
+
+for n_body, seed in [(50, 101), (100, 202), (200, 303)]:
+    start = random_start(seed)
+    stop  = random_stop(seed + 1)
+    body  = random_body(n_body, seed + 2)
+    seq   = start + body + stop
+    render(seq, f"S13_{n_body}body_{n_body+2}codon_random.png",
+           f"S13 | {n_body} random body codons (total {n_body+2}, start={start} stop={stop})")
+
+
+# =============================================================================
 print(f"\nDone.  All images saved to:  {OUT_DIR}\n")

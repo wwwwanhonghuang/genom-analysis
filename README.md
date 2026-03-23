@@ -54,9 +54,23 @@ BodyCodon  →₁ C0
 
 Each `→₁` rule is an **orbit representative**: the GE-CSG framework lifts it to rules for all cosets via the group action. A minimal valid CDS is 3 codons: `ATG + ≥1 body codon + TAA/TAG/TGA`.
 
-### Parsing: G-Equivariant Earley
+### Parsing: Two-Phase BFS (Algorithm 1)
 
-The parser (`EquivariantEarleyParser`) runs standard Earley chart parsing over the lifted grammar. For a sequence of length $n$ codons it operates on the coset sequence rather than raw nucleotides, giving a parse tree annotated with coset labels at every leaf.
+The primary parser (`TwoPhaseBFSParser`) implements Algorithm 1 from the paper exactly:
+
+**Phase 1 — BFS over sentential forms**
+
+Starting from `(S,)`, the parser applies R₁ rules (with full left/right context matching: `αAβ →₁ αγβ`) and stores visited states as orbit-canonical forms `[φ]_G = min_{g∈G} g·φ`. Orbit compression collapses G-equivalent derivation branches, reducing the BFS state space by a factor of up to `|G|` at each coset position.
+
+**Phase 2 — Symmetry breaking**
+
+When a sentential form becomes a pure coset string `x ∈ (G/G_i)^m`, it is checked against the raw input block-by-block: `(x_i, w[i·k:(i+1)·k]) ∈ R₂` for all `i`.
+
+**Depth limit** `D` controls search depth. A CDS of `n` codons requires `O(n)` derivation steps.
+
+**Pruning**: the parser precomputes minimum coset-yield `min_len[NT]` for every nonterminal and prunes sentential forms whose minimum yield exceeds the target length, keeping the BFS tractable.
+
+The legacy Earley-based parser (`EquivariantEarleyParser`) is retained for parse-tree generation and the stochastic extension.
 
 ---
 
@@ -89,13 +103,28 @@ The `StochasticEarleyParser` computes this by a single tree walk, and exposes pe
 
 ## Performance
 
-Empirical complexity measured by sweeping CDS lengths 1–50 body codons (10 reps each):
+### Theoretical Complexity
 
-| Parser | Mean (ms) | Complexity (log-log slope) |
-|---|---|---|
-| `earley_deterministic` | ~5–6 | ≈ O(n²) |
-| `earley_stochastic_uniform` | ~4 | ≈ O(n²) |
-| `earley_stochastic_human` | ~4 | ≈ O(n²) |
+| Grammar class | Parsing complexity |
+|---|---|
+| True CSG | PSPACE-complete; worst case $O(2^n)$ |
+| Mildly context-sensitive (TAG, CCG, …) | $O(n^5)$–$O(n^6)$ |
+| CFG — Earley (general) | $O(n^3)$ |
+| CFG — Earley (unambiguous) | $O(n^2)$ |
+
+GE-CSG is a genuine CSG (context-sensitive grammar): production rules have the form `αAβ →₁ αγβ` with arbitrary context tuples α, β. The class is PSPACE-complete in general. Orbit compression reduces the BFS state-space base by up to `|G|` but does not change the asymptotic complexity class.
+
+The current complete DNA grammar happens to use only context-free rules (empty α, β), so the Earley parser also works and runs in O(n³); but this is a property of the specific grammar, not of GE-CSG in general.
+
+### Empirical Benchmark
+
+Measured by sweeping CDS lengths 3–22 codons (5 reps each). The log-log slope over this small range is an unreliable estimator of the asymptotic exponent — a wider sweep (≥ 200 codons) is needed for a meaningful fit.
+
+| Parser | Mean (ms, n ≤ 22) |
+|---|---|
+| `earley_deterministic` | ~5.8 |
+| `earley_stochastic_uniform` | ~3.9 |
+| `earley_stochastic_human` | ~4.3 |
 
 ---
 
@@ -106,7 +135,7 @@ genom_analysis/
 ├── gecsg/
 │   ├── core/              # Group algebra (Z2, Z3, DirectProduct, CosetSpace)
 │   ├── grammar/           # complete_dna_grammar, stochastic_dna_grammar
-│   ├── parser/            # EquivariantEarleyParser, StochasticEarleyParser
+│   ├── parser/            # TwoPhaseBFSParser (Algorithm 1), EquivariantEarleyParser, StochasticEarleyParser
 │   ├── visualize/         # Parse tree rendering (deterministic + stochastic)
 │   └── profiler/          # ParseProfiler, load_profile_data
 ├── test/
@@ -133,6 +162,16 @@ conda activate genom
 
 # Run all tests
 python -m unittest discover -s test -p "test_*.py"
+
+# Parse a CDS sequence with the two-phase BFS parser (Algorithm 1)
+python -c "
+from gecsg.grammar.complete_dna_grammar import complete_dna_grammar
+from gecsg.parser.bfs_parser import TwoPhaseBFSParser
+g = complete_dna_grammar()
+p = TwoPhaseBFSParser(g)
+r = p.parse('ATGAAATAA', depth_limit=30)
+print(r.accepted, r.depth_reached, r.n_states)
+"
 
 # Generate parse tree images (complete grammar)
 python visualization/visualize_all.py
