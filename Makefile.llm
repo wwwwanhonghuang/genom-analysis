@@ -1,0 +1,162 @@
+# =============================================================================
+# Makefile.llm — LLM deploy targets (included by Makefile)
+# Tier 1  CPU / single GPU  : hyenadna, grover, dnabert1, dnabert2, gpn_msa
+# Tier 2  Multi-GPU node    : nucleotide_transformer (500M default, 2.5B full)
+# Tier 3  HPC / cloud       : evo (Together AI API or local 4–8× A100)
+# =============================================================================
+
+# =============================================================================
+# Help
+# =============================================================================
+
+.PHONY: help
+help:
+	@echo ""
+	@echo "  $(CYAN)Genome LLM — targets$(NC)"
+	@echo ""
+	@echo "  $(GREEN)Setup$(NC)          venv  deps-cpu  deps-gpu  deps-serve  deps-onnx"
+	@echo "  $(GREEN)Tier 1$(NC)         deploy-hyenadna  deploy-grover  deploy-dnabert1"
+	@echo "                 deploy-dnabert2  deploy-gpn-msa  deploy-tier1"
+	@echo "  $(YELLOW)Tier 2$(NC)         deploy-nt  deploy-nt-2.5b"
+	@echo "                 quantize-nt  quantize-nt-4bit  deploy-tier2"
+	@echo "  $(RED)Tier 3$(NC)         deploy-evo  deploy-evo-local  quantize-evo  deploy-tier3"
+	@echo "  $(GREEN)Serve$(NC)          serve-<model>  (ports 8000–8006)"
+	@echo "  $(GREEN)Bench$(NC)          bench-<model>  bench-all"
+	@echo "  $(GREEN)ONNX$(NC)           export-onnx-<model>  export-onnx-all"
+	@echo "  $(GREEN)Test$(NC)           test-<model>  test-all"
+	@echo "  $(GREEN)Clean$(NC)          clean  clean-venv"
+	@echo ""
+
+# =============================================================================
+# Tier 1 — CPU / single GPU
+# =============================================================================
+
+.PHONY: deploy-hyenadna deploy-grover deploy-dnabert1 deploy-dnabert2 deploy-gpn-msa
+
+deploy-hyenadna:
+	$(VENV_PIP) install transformers accelerate einops --quiet
+	$(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py
+
+deploy-grover:
+	$(VENV_PIP) install transformers --quiet
+	$(VENV_PY) $(LLM_DIR)/grover/deploy.py
+
+deploy-dnabert1:
+	$(VENV_PIP) install transformers --quiet
+	$(VENV_PY) $(LLM_DIR)/dnabert1/deploy.py
+
+deploy-dnabert2:
+	$(VENV_PIP) install transformers triton --quiet
+	$(VENV_PY) $(LLM_DIR)/dnabert2/deploy.py
+
+deploy-gpn-msa:
+	$(VENV_PIP) install transformers gpn --quiet
+	$(VENV_PY) $(LLM_DIR)/gpn_msa/deploy.py
+
+.PHONY: deploy-tier1
+deploy-tier1: deploy-hyenadna deploy-grover deploy-dnabert1 deploy-dnabert2 deploy-gpn-msa
+
+# =============================================================================
+# Tier 2 — Multi-GPU node
+# =============================================================================
+
+.PHONY: deploy-nt deploy-nt-2.5b quantize-nt quantize-nt-4bit
+
+deploy-nt:
+	$(VENV_PIP) install transformers accelerate bitsandbytes --quiet
+	$(VENV_PY) $(LLM_DIR)/nucleotide_transformer/deploy.py
+
+deploy-nt-2.5b:
+	$(VENV_PIP) install transformers accelerate bitsandbytes --quiet
+	NT_MODEL_ID=InstaDeepAI/nucleotide-transformer-2.5b-multi-species \
+	  $(VENV_PY) $(LLM_DIR)/nucleotide_transformer/deploy.py
+
+quantize-nt:
+	$(VENV_PIP) install bitsandbytes --quiet
+	NT_MODEL_ID=InstaDeepAI/nucleotide-transformer-2.5b-multi-species \
+	  QUANTIZE=int8 $(VENV_PY) $(LLM_DIR)/nucleotide_transformer/deploy.py
+
+quantize-nt-4bit:
+	$(VENV_PIP) install bitsandbytes --quiet
+	NT_MODEL_ID=InstaDeepAI/nucleotide-transformer-2.5b-multi-species \
+	  QUANTIZE=int4 $(VENV_PY) $(LLM_DIR)/nucleotide_transformer/deploy.py
+
+.PHONY: deploy-tier2
+deploy-tier2: deploy-nt deploy-nt-2.5b
+
+# =============================================================================
+# Tier 3 — HPC / cloud
+# =============================================================================
+
+.PHONY: deploy-evo deploy-evo-local quantize-evo
+
+deploy-evo:
+	$(VENV_PIP) install together stripedhyena --quiet
+	$(VENV_PY) $(LLM_DIR)/evo/deploy.py
+
+deploy-evo-local:
+	$(VENV_PIP) install transformers accelerate bitsandbytes --quiet
+	$(VENV_PY) $(LLM_DIR)/evo/deploy.py --local
+
+quantize-evo:
+	$(VENV_PIP) install bitsandbytes --quiet
+	QUANTIZE=int8 $(VENV_PY) $(LLM_DIR)/evo/deploy.py --local
+
+.PHONY: deploy-tier3
+deploy-tier3: deploy-evo deploy-evo-local
+
+# =============================================================================
+# Inference servers (FastAPI, llm/serve.py)
+# =============================================================================
+
+.PHONY: serve-hyenadna serve-grover serve-dnabert1 serve-dnabert2 serve-gpn-msa serve-nt serve-evo
+
+serve-hyenadna:  deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model hyenadna            --port 8000
+serve-grover:    deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model grover              --port 8001
+serve-dnabert1:  deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model dnabert1            --port 8002
+serve-dnabert2:  deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model dnabert2            --port 8003
+serve-gpn-msa:   deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model gpn_msa            --port 8004
+serve-nt:        deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model nucleotide_transformer --port 8005
+serve-evo:       deps-serve ; $(VENV_PY) $(LLM_DIR)/serve.py --model evo                --port 8006
+
+# =============================================================================
+# Benchmarks
+# =============================================================================
+
+.PHONY: bench-hyenadna bench-grover bench-dnabert1 bench-dnabert2 bench-gpn-msa bench-nt bench-evo bench-all
+
+bench-hyenadna: ; $(VENV_PY) $(LLM_DIR)/bench.py --model hyenadna             --lengths 512 4096 32768 131072 1000000
+bench-grover:   ; $(VENV_PY) $(LLM_DIR)/bench.py --model grover               --lengths 128 512 1024 2048
+bench-dnabert1: ; $(VENV_PY) $(LLM_DIR)/bench.py --model dnabert1             --lengths 128 256 512
+bench-dnabert2: ; $(VENV_PY) $(LLM_DIR)/bench.py --model dnabert2             --lengths 128 256 512 877
+bench-gpn-msa:  ; $(VENV_PY) $(LLM_DIR)/bench.py --model gpn_msa             --lengths 64 128
+bench-nt:       ; $(VENV_PY) $(LLM_DIR)/bench.py --model nucleotide_transformer --lengths 512 1000 3000 6000
+bench-evo:      ; $(VENV_PY) $(LLM_DIR)/bench.py --model evo                  --lengths 512 4096 32768 131072
+bench-all: bench-hyenadna bench-grover bench-dnabert1 bench-dnabert2 bench-gpn-msa bench-nt bench-evo
+
+# =============================================================================
+# ONNX export (Tier 1 only)
+# =============================================================================
+
+.PHONY: export-onnx-hyenadna export-onnx-dnabert2 export-onnx-grover export-onnx-all
+
+export-onnx-hyenadna: deps-onnx ; $(VENV_PY) $(LLM_DIR)/export_onnx.py --model hyenadna --out $(LLM_DIR)/hyenadna/onnx
+export-onnx-dnabert2: deps-onnx ; $(VENV_PY) $(LLM_DIR)/export_onnx.py --model dnabert2 --out $(LLM_DIR)/dnabert2/onnx
+export-onnx-grover:   deps-onnx ; $(VENV_PY) $(LLM_DIR)/export_onnx.py --model grover   --out $(LLM_DIR)/grover/onnx
+export-onnx-all: export-onnx-hyenadna export-onnx-dnabert2 export-onnx-grover
+
+# =============================================================================
+# Smoke tests
+# =============================================================================
+
+.PHONY: test-hyenadna test-grover test-dnabert1 test-dnabert2 test-gpn-msa test-nt test-evo test-evo-local test-all
+
+test-hyenadna: ; $(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py --test
+test-grover:   ; $(VENV_PY) $(LLM_DIR)/grover/deploy.py --test
+test-dnabert1: ; $(VENV_PY) $(LLM_DIR)/dnabert1/deploy.py --test
+test-dnabert2: ; $(VENV_PY) $(LLM_DIR)/dnabert2/deploy.py --test
+test-gpn-msa:  ; $(VENV_PY) $(LLM_DIR)/gpn_msa/deploy.py --test
+test-nt:       ; $(VENV_PY) $(LLM_DIR)/nucleotide_transformer/deploy.py --test
+test-evo:      ; $(VENV_PY) $(LLM_DIR)/evo/deploy.py --test
+test-evo-local:; $(VENV_PY) $(LLM_DIR)/evo/deploy.py --test --local
+test-all: test-hyenadna test-grover test-dnabert1 test-dnabert2 test-gpn-msa test-nt test-evo
