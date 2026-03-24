@@ -1,3 +1,6 @@
 parsing-infrustrature\genom\antlr4
 dataset
 __pycache__
+.venv
+outputs*
+outputs_*

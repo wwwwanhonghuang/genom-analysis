@@ -24,6 +24,7 @@ help:
 	@echo "  $(GREEN)Bench$(NC)          bench-<model>  bench-all"
 	@echo "  $(GREEN)ONNX$(NC)           export-onnx-<model>  export-onnx-all"
 	@echo "  $(GREEN)Test$(NC)           test-<model>  test-all"
+	@echo "                 test-hyenadna (pytest)  test-hyenadna-slow  test-hyenadna-smoke"
 	@echo "  $(GREEN)Clean$(NC)          clean  clean-venv"
 	@echo ""
 
@@ -36,6 +37,16 @@ help:
 deploy-hyenadna:
 	$(VENV_PIP) install transformers accelerate einops --quiet
 	$(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py
+
+deploy-hyenadna-32k:
+	$(VENV_PIP) install transformers accelerate einops --quiet
+	HYENA_MODEL_ID=LongSafari/hyenadna-small-32k-seqlen-hf \
+	  $(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py
+
+deploy-hyenadna-1m:
+	$(VENV_PIP) install transformers accelerate einops --quiet
+	HYENA_MODEL_ID=LongSafari/hyenadna-large-1m-seqlen-hf \
+	  $(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py
 
 deploy-grover:
 	$(VENV_PIP) install transformers --quiet
@@ -151,7 +162,19 @@ export-onnx-all: export-onnx-hyenadna export-onnx-dnabert2 export-onnx-grover
 
 .PHONY: test-hyenadna test-grover test-dnabert1 test-dnabert2 test-gpn-msa test-nt test-evo test-evo-local test-all
 
-test-hyenadna: ; $(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py --test
+test-hyenadna:
+	$(VENV_PIP) install pytest --quiet
+	$(VENV_PY) -m pytest $(LLM_DIR)/hyenadna/test/ -v
+
+test-hyenadna-slow:
+	$(VENV_PIP) install pytest --quiet
+	$(VENV_PY) -m pytest $(LLM_DIR)/hyenadna/test/ -v -m slow
+
+test-hyenadna-slow-skip-download:
+	$(VENV_PIP) install pytest --quiet
+	HYENA_SKIP_LONG_CONTEXT=1 $(VENV_PY) -m pytest $(LLM_DIR)/hyenadna/test/ -v -m slow
+
+test-hyenadna-smoke: ; $(VENV_PY) $(LLM_DIR)/hyenadna/deploy.py --test
 test-grover:   ; $(VENV_PY) $(LLM_DIR)/grover/deploy.py --test
 test-dnabert1: ; $(VENV_PY) $(LLM_DIR)/dnabert1/deploy.py --test
 test-dnabert2: ; $(VENV_PY) $(LLM_DIR)/dnabert2/deploy.py --test
