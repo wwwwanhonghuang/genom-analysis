@@ -23,6 +23,8 @@ help:
 	@echo "  $(GREEN)Serve$(NC)          serve-<model>  (ports 8000–8006)"
 	@echo "  $(GREEN)Bench$(NC)          bench-<model>  bench-all"
 	@echo "  $(GREEN)ONNX$(NC)           export-onnx-<model>  export-onnx-all"
+	@echo "  $(GREEN)Neural-symbolic$(NC)  test-neural-symbolic  test-neural-symbolic-integration"
+	@echo "                 visualize-demo (fast, random)  visualize-demo-full (HyenaDNA)"
 	@echo "  $(GREEN)Test$(NC)           test-<model>  test-all"
 	@echo "                 test-hyenadna (pytest)  test-hyenadna-slow  test-hyenadna-smoke"
 	@echo "  $(GREEN)Clean$(NC)          clean  clean-venv"
@@ -155,6 +157,37 @@ export-onnx-hyenadna: deps-onnx ; $(VENV_PY) $(LLM_DIR)/export_onnx.py --model h
 export-onnx-dnabert2: deps-onnx ; $(VENV_PY) $(LLM_DIR)/export_onnx.py --model dnabert2 --out $(LLM_DIR)/dnabert2/onnx
 export-onnx-grover:   deps-onnx ; $(VENV_PY) $(LLM_DIR)/export_onnx.py --model grover   --out $(LLM_DIR)/grover/onnx
 export-onnx-all: export-onnx-hyenadna export-onnx-dnabert2 export-onnx-grover
+
+# =============================================================================
+# Neural-symbolic parser (torch-struct)
+# =============================================================================
+
+.PHONY: deps-neural-symbolic
+deps-neural-symbolic: venv
+	$(VENV_PIP) install git+https://github.com/harvardnlp/pytorch-struct matplotlib --quiet
+	$(VENV_PIP) install pytest --quiet
+
+.PHONY: test-neural-symbolic
+test-neural-symbolic:
+	$(VENV_PIP) install pytest matplotlib --quiet
+	$(VENV_PY) -m pytest $(LLM_DIR)/neural_symbolic/test/ -v
+
+.PHONY: test-neural-symbolic-integration
+test-neural-symbolic-integration: deps-neural-symbolic
+	$(VENV_PY) -m pytest $(LLM_DIR)/neural_symbolic/test/ -v -m integration
+
+.PHONY: visualize-demo
+visualize-demo:
+	@echo "$(CYAN)→ Generating parse tree PNGs for cancer sequences...$(NC)"
+	$(VENV_PIP) install matplotlib --quiet
+	$(VENV_PY) $(LLM_DIR)/neural_symbolic/demo_visualize.py --no-encoder
+	@echo "$(GREEN)✓ PNGs saved to $(LLM_DIR)/neural_symbolic/output/$(NC)"
+
+.PHONY: visualize-demo-full
+visualize-demo-full: deps-neural-symbolic
+	@echo "$(CYAN)→ Generating parse tree PNGs with HyenaDNA encoder...$(NC)"
+	$(VENV_PY) $(LLM_DIR)/neural_symbolic/demo_visualize.py
+	@echo "$(GREEN)✓ PNGs saved to $(LLM_DIR)/neural_symbolic/output/$(NC)"
 
 # =============================================================================
 # Smoke tests
